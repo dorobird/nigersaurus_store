@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nigersaurus Store - Official</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+    .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .modal-bg { background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); }
+    .translate-dropdown { display: none; position: absolute; top: calc(100% + 8px); right: 0; background: white; border: 1px solid #eee; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); width: 180px; z-index: 9999; padding: 12px; }
+    .translate-dropdown.open { display: block; }
+  </style>
+</head>
+<body class="bg-white text-black min-h-screen flex flex-col">
+
+  <div id="app">
+    <nav class="sticky top-0 bg-white border-b border-gray-200 z-50">
+      <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-2 cursor-pointer hover:opacity-75 transition-opacity" onclick="showHome()">
+          <img src="https://github.com/dorobird/nigersaurus/raw/main/Nigersaurus_Store_logo.jpeg" alt="Logo" class="w-9 h-9 rounded object-cover" />
+          <h1 class="text-lg font-bold">Nigersaurus</h1>
+        </div>
+        <div class="flex items-center gap-6">
+          <button onclick="showHome()" class="text-sm hover:text-gray-600">Shop</button>
+          <div class="relative" id="translate-container">
+            <button onclick="toggleTranslate(event)" class="flex items-center gap-1 text-sm hover:text-gray-600">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"></path></svg>
+              Translate
+            </button>
+            <div class="translate-dropdown" id="translate-dropdown">
+              <p class="text-[10px] text-gray-400 font-bold mb-2 uppercase tracking-tighter">Translated by Nigersaurus</p>
+              <div class="space-y-1">
+                <button onclick="changeLang('en')" class="block w-full text-left px-2 py-1.5 text-xs hover:bg-gray-50 rounded">🇺🇸 English</button>
+                <button onclick="changeLang('ko')" class="block w-full text-left px-2 py-1.5 text-xs hover:bg-gray-50 rounded">🇰🇷 한국어</button>
+                <button onclick="changeLang('es')" class="block w-full text-left px-2 py-1.5 text-xs hover:bg-gray-50 rounded">🇪🇸 Español</button>
+                <button onclick="changeLang('zh')" class="block w-full text-left px-2 py-1.5 text-xs hover:bg-gray-50 rounded">🇨🇳 中文</button>
+                <button onclick="changeLang('fr')" class="block w-full text-left px-2 py-1.5 text-xs hover:bg-gray-50 rounded">🇫🇷 Français</button>
+              </div>
+            </div>
+          </div>
+          <button onclick="openLoginModal()" class="border border-gray-300 rounded px-3 py-1 text-sm hover:bg-gray-50">Sign In</button>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Home -->
+    <div id="home-content">
+      <section class="bg-gradient-to-b from-gray-50 to-white py-10 text-center px-4">
+        <h2 class="text-3xl md:text-4xl font-bold mb-2" id="txt-hero-title">Nigersaurus Store</h2>
+        <p class="text-gray-600 text-sm" id="txt-hero-desc">Exclusive items for the Late Cretaceous community</p>
+      </section>
+      <section class="max-w-6xl mx-auto px-4 py-6" id="category-buttons"></section>
+      <main class="max-w-6xl mx-auto px-4 py-8"><div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" id="product-grid"></div></main>
+    </div>
+
+    <!-- Detail -->
+    <div id="detail-content" class="hidden">
+      <div class="max-w-6xl mx-auto px-4 py-4"><button onclick="showHome()" class="text-sm text-gray-600 hover:text-black flex items-center gap-2">← <span id="txt-back">Back to Shop</span></button></div>
+      <main class="max-w-6xl mx-auto px-4 py-8">
+        <div id="product-detail-view"></div>
+        <div class="mt-16 border-t pt-12">
+          <h3 class="text-2xl font-bold mb-8" id="txt-reviews-title">Customer Reviews</h3>
+          <div id="reviews-list" class="space-y-6 mb-12"></div>
+          <div class="bg-gray-50 p-6 rounded-2xl border border-gray-100">
+            <h4 class="text-lg font-bold mb-4" id="txt-write-review">Write a Review</h4>
+            <div class="space-y-4">
+              <input type="text" id="review-name" placeholder="Your Name" class="w-full px-4 py-2 rounded-lg border border-gray-200 outline-none">
+              <div>
+                <input type="password" id="review-password" placeholder="Set a password (to delete your review later)" class="w-full px-4 py-2 rounded-lg border border-gray-200 outline-none">
+              </div>
+              <select id="review-rating" class="w-full px-4 py-2 rounded-lg border border-gray-200 outline-none">
+                <option value="5">★★★★★ (5 Stars)</option>
+                <option value="4">★★★★☆ (4 Stars)</option>
+                <option value="3">★★★☆☆ (3 Stars)</option>
+                <option value="2">★★☆☆☆ (2 Stars)</option>
+                <option value="1">★☆☆☆☆ (1 Star)</option>
+              </select>
+              <textarea id="review-comment" placeholder="Your Review" rows="4" class="w-full px-4 py-2 rounded-lg border border-gray-200 outline-none"></textarea>
+              <div class="flex items-start gap-2 bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-3">
+                <span class="text-yellow-500 text-sm mt-0.5">⚠️</span>
+                <p class="text-xs text-yellow-700 leading-relaxed">Your <strong>password</strong> is used to delete your review later. You can delete your review from any device using your password. Do not reuse passwords from other accounts.</p>
+              </div>
+              <!-- Honeypot: bots fill this, humans don't see it -->
+              <input type="text" id="review-hp" autocomplete="off" tabindex="-1" aria-hidden="true" style="position:absolute;left:-9999px;opacity:0;height:0;width:0;pointer-events:none;" placeholder="Leave blank">
+              <button onclick="submitReview()" id="submit-btn" class="w-full bg-black text-white py-3 rounded-lg font-bold hover:bg-gray-800 transition-all">Submit Review</button>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Login Modal -->
+    <div id="login-modal" class="fixed inset-0 modal-bg z-[100] hidden flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl w-full max-w-md p-8 shadow-2xl relative">
+        <button onclick="closeLoginModal()" class="absolute top-4 right-4 text-gray-400 hover:text-black">✕</button>
+        <h3 class="text-2xl font-bold mb-6 text-center">Sign In</h3>
+        <div class="space-y-4">
+          <input type="email" id="login-email" class="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none" placeholder="Email">
+          <input type="password" id="login-password" class="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none" placeholder="Password">
+          <button onclick="attemptLogin()" class="w-full bg-black text-white py-4 rounded-xl font-bold hover:bg-gray-800 transition-all">Login</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Report Modal -->
+    <div id="report-modal" class="fixed inset-0 modal-bg z-[200] hidden flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl relative">
+        <button onclick="closeReportModal()" class="absolute top-4 right-4 text-gray-400 hover:text-black">✕</button>
+        <h3 class="text-lg font-bold mb-2">Report Review</h3>
+        <p class="text-sm text-gray-500 mb-4">Select a reason for reporting:</p>
+        <div class="space-y-2 mb-6">
+          <label class="flex items-center gap-3 p-3 rounded-lg border border-gray-100 hover:bg-gray-50 cursor-pointer">
+            <input type="radio" name="report-reason" value="spam" class="accent-black">
+            <span class="text-sm">Spam <span class="text-xs text-gray-400">(1 day ban)</span></span>
+          </label>
+          <label class="flex items-center gap-3 p-3 rounded-lg border border-gray-100 hover:bg-gray-50 cursor-pointer">
+            <input type="radio" name="report-reason" value="abuse" class="accent-black">
+            <span class="text-sm">Abusive Language <span class="text-xs text-gray-400">(3 day ban)</span></span>
+          </label>
+          <label class="flex items-center gap-3 p-3 rounded-lg border border-gray-100 hover:bg-gray-50 cursor-pointer">
+            <input type="radio" name="report-reason" value="false" class="accent-black">
+            <span class="text-sm">False Information <span class="text-xs text-gray-400">(7 day ban)</span></span>
+          </label>
+        </div>
+        <button onclick="submitReport()" class="w-full bg-red-600 text-white py-3 rounded-lg font-bold hover:bg-red-700 transition-all">Submit Report</button>
+      </div>
+    </div>
+
+    <!-- Delete Modal -->
+    <div id="delete-modal" class="fixed inset-0 modal-bg z-[200] hidden flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl relative">
+        <button onclick="closeDeleteModal()" class="absolute top-4 right-4 text-gray-400 hover:text-black">✕</button>
+        <h3 class="text-lg font-bold mb-2">Delete Review</h3>
+        <p class="text-sm text-gray-500 mb-1">Are you sure you want to delete this review?</p>
+        <p class="text-xs text-gray-400 mb-4">Enter the password you set when writing the review.</p>
+        <input type="password" id="delete-password-input" placeholder="Your review password" class="w-full px-4 py-2 rounded-lg border border-gray-200 outline-none mb-4">
+        <div class="flex gap-3">
+          <button onclick="closeDeleteModal()" class="flex-1 border border-gray-200 text-gray-600 py-3 rounded-lg font-bold hover:bg-gray-50 transition-all">Cancel</button>
+          <button onclick="confirmDelete()" class="flex-1 bg-red-600 text-white py-3 rounded-lg font-bold hover:bg-red-700 transition-all">Delete</button>
+        </div>
+      </div>
+    </div>
+
+    <footer class="bg-gray-900 text-white py-12 mt-auto text-center px-4">
+      <p class="text-sm mb-4">©-112000000 Nigersaurus Co. | Elrhaz Formation, Niger</p>
+      <div class="bg-red-900/30 border border-red-500/50 rounded-lg p-4 inline-block">
+        <p class="text-red-100 text-sm" id="txt-footer-disclaimer">This is a PARODY SITE. No real transactions occur.</p>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    // === FIREBASE ===
+    const firebaseConfig = {
+      apiKey: "AIzaSyAHdX9GXSVHiN5RNxa01O5dgyhdGargnWE",
+      authDomain: "nigersaurus-shop.firebaseapp.com",
+      databaseURL: "https://nigersaurus-shop-default-rtdb.firebaseio.com",
+      projectId: "nigersaurus-shop",
+      storageBucket: "nigersaurus-shop.firebasestorage.app",
+      messagingSenderId: "270605972811",
+      appId: "1:270605972811:web:bd96b5fbd8acb01f2ca4ce",
+      measurementId: "G-BDNMKQZZV6"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // === SESSION FINGERPRINT (for ban/report tracking only, not for delete) ===
+    function getDeviceId() {
+      let id = localStorage.getItem('_nig_did');
+      if (!id) {
+        const raw = [navigator.userAgent, navigator.language, screen.width + 'x' + screen.height, new Date().getTimezoneOffset(), navigator.hardwareConcurrency || '', navigator.platform || ''].join('|');
+        let hash = 0;
+        for (let i = 0; i < raw.length; i++) { hash = ((hash << 5) - hash) + raw.charCodeAt(i); hash |= 0; }
+        id = 'dev_' + Math.abs(hash).toString(36) + '_' + Date.now().toString(36);
+        localStorage.setItem('_nig_did', id);
+      }
+      return id;
+    }
+    const DEVICE_ID = getDeviceId();
+    const DEVICE_KEY = DEVICE_ID.replace(/[.#$\/\[\]]/g, '_');
+
+    // === ANTI-MACRO: Content hash dedup + submission cooldown + honeypot ===
+    // Content hash: SHA-like simple hash of name+comment to detect duplicate content
+    function contentHash(name, comment, productId) {
+      const raw = (name.toLowerCase().trim() + '|' + comment.toLowerCase().trim() + '|' + productId).replace(/\s+/g, ' ');
+      let h = 5381;
+      for (let i = 0; i < raw.length; i++) { h = ((h << 5) + h) + raw.charCodeAt(i); h |= 0; }
+      return 'ch_' + Math.abs(h).toString(36);
+    }
+
+    // Cooldown: min 60 seconds between submissions (tracked in localStorage)
+    const SUBMIT_COOLDOWN_MS = 60 * 1000;
+    function getLastSubmitTime() { return parseInt(localStorage.getItem('_nig_lst') || '0', 10); }
+    function setLastSubmitTime() { localStorage.setItem('_nig_lst', Date.now().toString()); }
+
+    // Check if this content hash already exists for this product
+    async function checkDuplicateContent(hash) {
+      return new Promise((resolve) => {
+        db.ref('content_hashes/' + hash).once('value', (snap) => resolve(snap.exists()));
+      });
+    }
+    async function registerContentHash(hash) {
+      // Store with TTL marker (cleanup after 90 days via server-side or periodic cleanup)
+      await db.ref('content_hashes/' + hash).set({ at: Date.now() });
+    }
+    function cleanupOldContentHashes() {
+      const cutoff = Date.now() - (90 * 24 * 60 * 60 * 1000);
+      db.ref('content_hashes').once('value', (snap) => {
+        const data = snap.val();
+        if (!data) return;
+        Object.keys(data).forEach(k => { if (data[k].at < cutoff) db.ref('content_hashes/' + k).remove(); });
+      });
+    }
+    cleanupOldContentHashes();
+
+    // === BAN CHECK ===
+    async function checkBan() {
+      return new Promise((resolve) => {
+        db.ref('bans/' + DEVICE_KEY).once('value', (snap) => {
+          const ban = snap.val();
+          if (!ban) { resolve(null); return; }
+          if (Date.now() < ban.until) { resolve(ban); }
+          else { db.ref('bans/' + DEVICE_KEY).remove(); resolve(null); }
+        });
+      });
+    }
+
+    const BAN_DAYS = { spam: 1, abuse: 3, false: 7 };
+
+    // === DAILY LIMIT ===
+    async function checkDailyLimit() {
+      return new Promise((resolve) => {
+        const today = new Date().toISOString().slice(0, 10);
+        db.ref('daily_counts/' + DEVICE_KEY + '/' + today).once('value', (snap) => resolve(snap.val() || 0));
+      });
+    }
+    async function incrementDailyCount() {
+      const today = new Date().toISOString().slice(0, 10);
+      const ref = db.ref('daily_counts/' + DEVICE_KEY + '/' + today);
+      const snap = await ref.once('value');
+      await ref.set((snap.val() || 0) + 1);
+      // cleanup old days
+      db.ref('daily_counts/' + DEVICE_KEY).once('value', (s) => {
+        const data = s.val();
+        if (!data) return;
+        Object.keys(data).forEach(k => { if (k < today) db.ref('daily_counts/' + DEVICE_KEY + '/' + k).remove(); });
+      });
+    }
+
+    // === PASSWORD HASH ===
+    function simpleHash(str) {
+      let hash = 5381;
+      for (let i = 0; i < str.length; i++) { hash = ((hash << 5) + hash) + str.charCodeAt(i); hash |= 0; }
+      return hash.toString(36);
+    }
+
+    // === CLEANUP 3-MONTH OLD REVIEWS ===
+    function cleanupOldReviews() {
+      const threeMonthsAgo = Date.now() - (90 * 24 * 60 * 60 * 1000);
+      db.ref('reviews').once('value', (snap) => {
+        const data = snap.val();
+        if (!data) return;
+        Object.keys(data).forEach(k => { if (data[k].createdAt < threeMonthsAgo) db.ref('reviews/' + k).remove(); });
+      });
+    }
+    cleanupOldReviews();
+
+    // === TRANSLATIONS ===
+    const LANGS = {
+      en: {
+        heroTitle: "Nigersaurus Store",
+        heroDesc: "Exclusive items for the Late Cretaceous community",
+        back: "Back to Shop",
+        reviewsTitle: "Customer Reviews",
+        writeReview: "Write a Review",
+        submit: "Submit Review",
+        disclaimer: "This is a PARODY SITE. No real transactions occur.",
+        error: "⚠️ You are NOT a Nigersaurus.\nIf you wish to proceed, please travel back 115 million years by time machine and try again.",
+        success: "Review Submitted!"
+      },
+      ko: {
+        heroTitle: "Nigersaurus Store",
+        heroDesc: "백악기 후기 커뮤니티 전용 아이템",
+        back: "상점으로 돌아가기",
+        reviewsTitle: "고객 리뷰",
+        writeReview: "리뷰 작성하기",
+        submit: "리뷰 제출",
+        disclaimer: "이 사이트는 패러디 사이트입니다. 실제 거래는 없습니다.",
+        error: "⚠️ 당신은 니게르사우루스가 아닙니다.\n로그인을 원하신다면 타임머신을 타고 1억 1500만 년 전으로 돌아가서 다시 시도해 주세요.",
+        success: "리뷰가 제출되었습니다!"
+      },
+      es: {
+        heroTitle: "Nigersaurus Tienda",
+        heroDesc: "Artículos exclusivos para la comunidad del Cretácico Tardío",
+        back: "Volver a la tienda",
+        reviewsTitle: "Reseñas de clientes",
+        writeReview: "Escribir una reseña",
+        submit: "Enviar reseña",
+        disclaimer: "Este es un SITIO DE PARODIA. No se realizan transacciones reales.",
+        error: "⚠️ Usted NO es un Nigersaurus.\nSi desea continuar, viaje 115 millones de años atrás en una máquina del tiempo e inténtelo de nuevo.",
+        success: "¡Reseña enviada!"
+      },
+      zh: {
+        heroTitle: "尼日尔龙商店",
+        heroDesc: "为晚白垩纪社区提供的独家商品",
+        back: "返回商店",
+        reviewsTitle: "顾客评价",
+        writeReview: "写评价",
+        submit: "提交评价",
+        disclaimer: "这是一个恶搞网站，不涉及真实交易。",
+        error: "⚠️ 您不是尼日尔龙。\n如需登录，请乘坐时光机回到1亿1500万年前重试。",
+        success: "评价已提交！"
+      },
+      fr: {
+        heroTitle: "Boutique Nigersaurus",
+        heroDesc: "Articles exclusifs pour la communauté du Crétacé supérieur",
+        back: "Retour à la boutique",
+        reviewsTitle: "Avis clients",
+        writeReview: "Écrire un avis",
+        submit: "Soumettre l'avis",
+        disclaimer: "Ceci est un SITE PARODIQUE. Aucune transaction réelle n'a lieu.",
+        error: "⚠️ Vous n'êtes PAS un Nigersaurus.\nSi vous souhaitez continuer, remontez 115 millions d'années en arrière en machine à remonter le temps et réessayez.",
+        success: "Avis soumis !"
+      }
+    };
+
+    let currentLang = 'en';
+    function toggleTranslate(e) {
+      e.stopPropagation();
+      const dd = document.getElementById('translate-dropdown');
+      dd.classList.toggle('open');
+    }
+    document.addEventListener('click', function() {
+      const dd = document.getElementById('translate-dropdown');
+      if (dd) dd.classList.remove('open');
+    });
+
+    function changeLang(lang) {
+      currentLang = lang;
+      const l = LANGS[lang] || LANGS['en'];
+      const setEl = (id, text) => { const el = document.getElementById(id); if (el) el.innerText = text; };
+      setEl('txt-hero-title', l.heroTitle);
+      setEl('txt-hero-desc', l.heroDesc);
+      setEl('txt-back', l.back);
+      setEl('txt-reviews-title', l.reviewsTitle);
+      setEl('txt-write-review', l.writeReview);
+      setEl('submit-btn', l.submit);
+      setEl('txt-footer-disclaimer', l.disclaimer);
+      document.getElementById('translate-dropdown').classList.remove('open');
+    }
+
+    // === PRODUCTS ===
+    const PRODUCTS = [
+      { id: 1, name: "Official T-Shirt", category: "Apparel", price: "$35.00", description: "100% prehistoric cotton.", imageUrl: "https://github.com/dorobird/nigersaurus/raw/main/nigersaurus_T_shrit.jpeg", soldOut: 0 },
+      { id: 2, name: "Cretaceous Pajamas", category: "Apparel", price: "$55.00", description: "Cozy sleepwear for dinosaurs.", imageUrl: "https://github.com/dorobird/nigersaurus/raw/main/nigersaurus_Hoodie.jpeg", soldOut: 1 },
+      { id: 3, name: "Nigersaurus Mini Figure", category: "Collectibles", price: "$25.00", description: "Highly detailed figurine.", imageUrl: "https://github.com/dorobird/nigersaurus/raw/main/nigersaurus_MiniFigure.jpeg", soldOut: 0 },
+      { id: 4, name: "Nigersaurus Mug", category: "Collectibles", price: "$18.00", description: "Start your morning with prehistoric charm.", imageUrl: "https://github.com/dorobird/nigersaurus/raw/main/nigersaurus_mug.jpeg", soldOut: 0 },
+      { id: 5, name: "Head Fossil Replica", category: "Fossils", price: "$120.00", description: "Museum-quality replica.", imageUrl: "https://github.com/dorobird/nigersaurus/raw/main/nigersaurus_head_fossil.jpeg", soldOut: 0 },
+      { id: 6, name: "Lawn Mowing Service", category: "Services", price: "$200.00", description: "Professional lawn care by an actual Nigersaurus.", imageUrl: "https://github.com/dorobird/nigersaurus/raw/main/nigersaurus_eating.jpeg", soldOut: 0 }
+    ];
+
+    let currentCategory = "All";
+    let activeProductId = null;
+    let reportingReviewKey = null;
+    let deletingReviewKey = null;
+
+    function init() { renderCategoryButtons(); renderProducts(); }
+
+    function renderCategoryButtons() {
+      const cats = ["All", "Apparel", "Collectibles", "Fossils", "Services"];
+      document.getElementById('category-buttons').innerHTML = `<div class="flex justify-center gap-2 flex-wrap">${cats.map(cat => `<button onclick="filterByCategory('${cat}')" class="px-4 py-1.5 rounded-full text-xs font-medium ${currentCategory === cat ? 'bg-black text-white' : 'bg-white text-black border border-gray-200'}">${cat}</button>`).join('')}</div>`;
+    }
+
+    function renderProducts() {
+      const filtered = currentCategory === "All" ? PRODUCTS : PRODUCTS.filter(p => p.category === currentCategory);
+      document.getElementById('product-grid').innerHTML = filtered.map(p => `<div class="bg-white rounded-xl border border-gray-100 overflow-hidden cursor-pointer hover:shadow-lg transition-all" onclick="showDetail(${p.id})"><div class="relative aspect-square"><img src="${p.imageUrl}" class="w-full h-full object-cover ${p.soldOut ? 'opacity-50 grayscale' : ''}" />${p.soldOut ? '<div class="absolute top-2 left-2 bg-black text-white px-2 py-1 text-[10px] font-bold rounded">SOLD OUT</div>' : ''}</div><div class="p-4"><p class="text-[10px] text-gray-400 font-bold uppercase">${p.category}</p><h3 class="text-sm font-semibold h-10 line-clamp-2">${p.name}</h3><div class="flex justify-between items-center mt-4"><p class="font-bold">${p.price}</p><button class="px-3 py-1 rounded-lg text-xs font-bold ${p.soldOut ? 'bg-gray-100 text-gray-400' : 'bg-black text-white'}">Buy Now</button></div></div></div>`).join('');
+    }
+
+    function showDetail(id) {
+      activeProductId = id;
+      const p = PRODUCTS.find(x => x.id === id);
+      document.getElementById('product-detail-view').innerHTML = `<div class="grid grid-cols-1 lg:grid-cols-2 gap-12"><img src="${p.imageUrl}" class="rounded-2xl w-full aspect-square object-cover" /><div><p class="text-xs text-gray-400 font-bold uppercase">${p.category}</p><h2 class="text-3xl font-extrabold mb-4">${p.name}</h2><p class="text-2xl font-bold mb-6">${p.price}</p><p class="text-gray-600 mb-8">${p.description}</p><button class="w-full py-4 rounded-xl bg-black text-white font-bold hover:bg-gray-800" onclick="handleBuyNow()">Buy Now</button></div></div>`;
+      loadReviews(id);
+      document.getElementById('home-content').classList.add('hidden');
+      document.getElementById('detail-content').classList.remove('hidden');
+      window.scrollTo(0, 0);
+    }
+
+    function loadReviews(productId) {
+      db.ref('reviews').orderByChild('productId').equalTo(productId).on('value', (snapshot) => {
+        const data = snapshot.val();
+        const list = document.getElementById('reviews-list');
+        if (!data) { list.innerHTML = '<p class="text-center text-gray-400 py-8">No reviews yet.</p>'; return; }
+        const arr = Object.entries(data).map(([key, val]) => ({ key, ...val })).sort((a, b) => b.createdAt - a.createdAt);
+        list.innerHTML = arr.map(r => {
+          const isOwn = r.deviceId === DEVICE_ID;
+          const alreadyReported = r.reports ? Object.prototype.hasOwnProperty.call(r.reports, DEVICE_KEY) : false;
+          const reportCount = r.reports ? Object.keys(r.reports).length : 0;
+          const stars = '★'.repeat(Math.max(0, Math.min(5, r.rating || 0)));
+
+          let actionBtn = '';
+          if (alreadyReported) {
+            actionBtn = `<span class="text-[11px] text-gray-300 italic">Reported</span>`;
+          } else {
+            actionBtn = `
+              <button onclick="openDeleteModal('${r.key}')" class="text-[11px] px-2 py-0.5 rounded border border-gray-200 text-gray-400 hover:border-red-300 hover:text-red-500 transition-colors">Delete</button>
+              <button onclick="openReportModal('${r.key}')" class="text-[11px] px-2 py-0.5 rounded border border-gray-200 text-gray-400 hover:border-orange-300 hover:text-orange-500 transition-colors ml-1">Report</button>`;
+          }
+
+          return `<div class="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
+            <div class="flex justify-between items-start mb-3">
+              <div>
+                <p class="font-bold text-sm">${r.userName}</p>
+                <p class="text-yellow-400 text-xs tracking-wide">${stars}</p>
+              </div>
+              <div class="flex flex-col items-end gap-1.5">
+                <p class="text-[10px] text-gray-400">${new Date(r.createdAt).toLocaleDateString()}</p>
+                ${actionBtn}
+              </div>
+            </div>
+            <p class="text-gray-700 text-sm leading-relaxed">${r.comment}</p>
+            ${reportCount > 0 ? `<p class="text-[10px] text-red-400 mt-2">⚑ ${reportCount} report${reportCount > 1 ? 's' : ''}</p>` : ''}
+          </div>`;
+        }).join('');
+      });
+    }
+
+    async function submitReview() {
+      const name = document.getElementById('review-name').value.trim();
+      const password = document.getElementById('review-password').value.trim();
+      const rating = parseInt(document.getElementById('review-rating').value);
+      const comment = document.getElementById('review-comment').value.trim();
+      const honeypot = document.getElementById('review-hp').value;
+      const btn = document.getElementById('submit-btn');
+
+      // Honeypot check — bots fill hidden fields
+      if (honeypot) return;
+
+      if (!name || !comment) { alert("Please fill in your name and review."); return; }
+      if (!password) { alert("Please set a password so you can delete your review later."); return; }
+      if (comment.length < 5) { alert("Review is too short. Please write something meaningful."); return; }
+
+      // Cooldown check
+      const lastSubmit = getLastSubmitTime();
+      const elapsed = Date.now() - lastSubmit;
+      if (elapsed < SUBMIT_COOLDOWN_MS) {
+        const wait = Math.ceil((SUBMIT_COOLDOWN_MS - elapsed) / 1000);
+        alert(`Please wait ${wait} more second(s) before submitting another review.`);
+        return;
+      }
+
+      // Ban check
+      const ban = await checkBan();
+      if (ban) {
+        const remaining = Math.ceil((ban.until - Date.now()) / (1000 * 60 * 60 * 24));
+        alert(`You are banned for ${remaining} more day(s).\nReason: ${ban.reason}`);
+        return;
+      }
+
+      // Daily limit
+      const count = await checkDailyLimit();
+      if (count >= 3) {
+        alert("You've reached the daily review limit (3 per day). Try again tomorrow.");
+        return;
+      }
+
+      // Duplicate content check
+      const cHash = contentHash(name, comment, activeProductId);
+      const isDupe = await checkDuplicateContent(cHash);
+      if (isDupe) {
+        alert("A review with identical content already exists. Please write an original review.");
+        return;
+      }
+
+      btn.disabled = true; btn.innerText = "Submitting...";
+      db.ref('reviews').push({
+        productId: activeProductId,
+        userName: name,
+        rating,
+        comment,
+        createdAt: Date.now(),
+        deviceId: DEVICE_ID,
+        passwordHash: simpleHash(password),
+        contentHash: cHash,
+        reports: null
+      }, async (err) => {
+        btn.disabled = false;
+        btn.innerText = LANGS[currentLang].submit || "Submit Review";
+        if (err) {
+          alert("Submit Failed!\nError: " + err.message);
+        } else {
+          await incrementDailyCount();
+          await registerContentHash(cHash);
+          setLastSubmitTime();
+          alert(LANGS[currentLang].success || "Review Submitted!");
+          document.getElementById('review-name').value = '';
+          document.getElementById('review-password').value = '';
+          document.getElementById('review-comment').value = '';
+        }
+      });
+    }
+
+    // === REPORT ===
+    function openReportModal(reviewKey) {
+      reportingReviewKey = reviewKey;
+      document.querySelectorAll('input[name="report-reason"]').forEach(r => r.checked = false);
+      document.getElementById('report-modal').classList.remove('hidden');
+    }
+    function closeReportModal() {
+      reportingReviewKey = null;
+      document.getElementById('report-modal').classList.add('hidden');
+    }
+    async function submitReport() {
+      const reasonEl = document.querySelector('input[name="report-reason"]:checked');
+      if (!reasonEl) { alert("Please select a reason."); return; }
+      const reason = reasonEl.value;
+      if (!reportingReviewKey) return;
+
+      const reviewRef = db.ref('reviews/' + reportingReviewKey);
+      const snap = await reviewRef.once('value');
+      const review = snap.val();
+      if (!review) { alert("Review not found."); closeReportModal(); return; }
+      if (review.reports && Object.prototype.hasOwnProperty.call(review.reports, DEVICE_KEY)) { alert("You have already reported this review."); closeReportModal(); return; }
+
+      await db.ref('reviews/' + reportingReviewKey + '/reports/' + DEVICE_KEY).set({ reason, at: Date.now() });
+
+      const updatedSnap = await reviewRef.once('value');
+      const updated = updatedSnap.val();
+      const reportCount = updated && updated.reports ? Object.keys(updated.reports).length : 0;
+
+      if (reportCount >= 5) {
+        const authorDeviceKey = updated.deviceId ? updated.deviceId.replace(/[.#$\/\[\]]/g, '_') : null;
+        if (authorDeviceKey) {
+          const banDays = BAN_DAYS[reason] || 1;
+          await db.ref('bans/' + authorDeviceKey).set({ reason, until: Date.now() + banDays * 24 * 60 * 60 * 1000, bannedAt: Date.now() });
+        }
+        await reviewRef.remove();
+        alert("Report submitted. This review has been removed due to multiple reports.");
+      } else {
+        alert("Report submitted. Thank you.");
+      }
+      closeReportModal();
+    }
+
+    // === DELETE OWN REVIEW ===
+    function openDeleteModal(reviewKey) {
+      deletingReviewKey = reviewKey;
+      document.getElementById('delete-password-input').value = '';
+      document.getElementById('delete-modal').classList.remove('hidden');
+    }
+    function closeDeleteModal() {
+      deletingReviewKey = null;
+      document.getElementById('delete-modal').classList.add('hidden');
+    }
+    async function confirmDelete() {
+      const input = document.getElementById('delete-password-input').value.trim();
+      if (!input) { alert("Please enter your password."); return; }
+
+      const reviewRef = db.ref('reviews/' + deletingReviewKey);
+      const snap = await reviewRef.once('value');
+      const review = snap.val();
+      if (!review) { alert("Review not found."); closeDeleteModal(); return; }
+
+      if (!review.passwordHash) {
+        alert("This review cannot be deleted (no password was set when it was written).");
+        closeDeleteModal(); return;
+      }
+      if (simpleHash(input) !== review.passwordHash) {
+        alert("Wrong password. Please try again.");
+        return;
+      }
+
+      // Remove content hash entry so the same content can be rewritten later
+      if (review.contentHash) {
+        await db.ref('content_hashes/' + review.contentHash).remove();
+      }
+      await reviewRef.remove();
+      alert("Your review has been deleted.");
+      closeDeleteModal();
+    }
+
+    // === OTHER ===
+    function openLoginModal() { document.getElementById('login-modal').classList.remove('hidden'); }
+    function closeLoginModal() { document.getElementById('login-modal').classList.add('hidden'); }
+    function attemptLogin() { alert(LANGS[currentLang].error); closeLoginModal(); }
+    function filterByCategory(cat) { currentCategory = cat; renderCategoryButtons(); renderProducts(); showHome(); }
+    function showHome() { document.getElementById('home-content').classList.remove('hidden'); document.getElementById('detail-content').classList.add('hidden'); }
+    function handleBuyNow() { openLoginModal(); }
+
+    init();
+  </script>
+</body>
+</html>
